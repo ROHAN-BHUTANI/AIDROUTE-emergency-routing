@@ -24,3 +24,7 @@ frontend/out/
 # Generated local outputs
 cache/
 *.log
+
+# Large local datasets
+data/roads.csv
+roads.csv
