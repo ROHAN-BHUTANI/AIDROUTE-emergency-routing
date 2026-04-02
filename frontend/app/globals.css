@@ -1,0 +1,178 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --background: oklch(0.12 0.02 255);
+  --foreground: oklch(0.98 0.01 255);
+  --card: oklch(0.16 0.02 255);
+  --card-foreground: oklch(0.98 0.01 255);
+  --popover: oklch(0.17 0.02 255);
+  --popover-foreground: oklch(0.98 0.01 255);
+  --primary: oklch(0.72 0.14 156);
+  --primary-foreground: oklch(0.12 0.02 255);
+  --secondary: oklch(0.22 0.02 255);
+  --secondary-foreground: oklch(0.98 0.01 255);
+  --muted: oklch(0.22 0.02 255);
+  --muted-foreground: oklch(0.7 0.02 255);
+  --accent: oklch(0.72 0.14 182);
+  --accent-foreground: oklch(0.12 0.02 255);
+  --destructive: oklch(0.64 0.2 24);
+  --destructive-foreground: oklch(0.98 0.01 255);
+  --warning: oklch(0.79 0.14 76);
+  --warning-foreground: oklch(0.12 0.02 255);
+  --success: oklch(0.72 0.14 156);
+  --success-foreground: oklch(0.12 0.02 255);
+  --border: oklch(0.26 0.02 255);
+  --input: oklch(0.2 0.02 255);
+  --ring: oklch(0.72 0.14 156);
+  --chart-1: oklch(0.72 0.14 156);
+  --chart-2: oklch(0.72 0.14 182);
+  --chart-3: oklch(0.79 0.14 76);
+  --chart-4: oklch(0.64 0.2 24);
+  --chart-5: oklch(0.58 0.12 285);
+  --radius: 0.9rem;
+  --sidebar: oklch(0.1 0.02 255);
+  --sidebar-foreground: oklch(0.98 0.01 255);
+  --sidebar-primary: oklch(0.72 0.14 156);
+  --sidebar-primary-foreground: oklch(0.12 0.02 255);
+  --sidebar-accent: oklch(0.18 0.02 255);
+  --sidebar-accent-foreground: oklch(0.98 0.01 255);
+  --sidebar-border: oklch(0.22 0.02 255);
+  --sidebar-ring: oklch(0.72 0.14 156);
+}
+
+.dark {
+  --background: oklch(0.12 0.02 255);
+  --foreground: oklch(0.98 0.01 255);
+  --card: oklch(0.16 0.02 255);
+  --card-foreground: oklch(0.98 0.01 255);
+  --popover: oklch(0.17 0.02 255);
+  --popover-foreground: oklch(0.98 0.01 255);
+  --primary: oklch(0.72 0.14 156);
+  --primary-foreground: oklch(0.12 0.02 255);
+  --secondary: oklch(0.22 0.02 255);
+  --secondary-foreground: oklch(0.98 0.01 255);
+  --muted: oklch(0.22 0.02 255);
+  --muted-foreground: oklch(0.7 0.02 255);
+  --accent: oklch(0.72 0.14 182);
+  --accent-foreground: oklch(0.12 0.02 255);
+  --destructive: oklch(0.64 0.2 24);
+  --destructive-foreground: oklch(0.98 0.01 255);
+  --warning: oklch(0.79 0.14 76);
+  --warning-foreground: oklch(0.12 0.02 255);
+  --success: oklch(0.72 0.14 156);
+  --success-foreground: oklch(0.12 0.02 255);
+  --border: oklch(0.26 0.02 255);
+  --input: oklch(0.2 0.02 255);
+  --ring: oklch(0.72 0.14 156);
+  --chart-1: oklch(0.72 0.14 156);
+  --chart-2: oklch(0.72 0.14 182);
+  --chart-3: oklch(0.79 0.14 76);
+  --chart-4: oklch(0.64 0.2 24);
+  --chart-5: oklch(0.58 0.12 285);
+  --sidebar: oklch(0.1 0.02 255);
+  --sidebar-foreground: oklch(0.98 0.01 255);
+  --sidebar-primary: oklch(0.72 0.14 156);
+  --sidebar-primary-foreground: oklch(0.12 0.02 255);
+  --sidebar-accent: oklch(0.18 0.02 255);
+  --sidebar-accent-foreground: oklch(0.98 0.01 255);
+  --sidebar-border: oklch(0.22 0.02 255);
+  --sidebar-ring: oklch(0.72 0.14 156);
+}
+
+@theme inline {
+  --font-sans: var(--font-manrope), 'Manrope', system-ui, sans-serif;
+  --font-mono: 'Geist Mono', 'Geist Mono Fallback';
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+@layer base {
+  html {
+    color-scheme: dark;
+    scroll-behavior: smooth;
+  }
+
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    min-height: 100vh;
+    background:
+      radial-gradient(circle at top left, rgba(34, 197, 94, 0.15), transparent 24%),
+      radial-gradient(circle at top right, rgba(20, 184, 166, 0.12), transparent 22%),
+      radial-gradient(circle at bottom left, rgba(59, 130, 246, 0.14), transparent 26%),
+      linear-gradient(180deg, rgba(6, 11, 24, 0.96) 0%, rgba(8, 14, 28, 1) 100%);
+    background-attachment: fixed;
+  }
+
+  ::selection {
+    background: rgba(34, 197, 94, 0.28);
+    color: var(--foreground);
+  }
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: -20% 0 auto -10%;
+  height: 42rem;
+  background: radial-gradient(circle, rgba(34, 197, 94, 0.15), transparent 62%);
+  pointer-events: none;
+  z-index: -1;
+  filter: blur(12px);
+}
+
+body::after {
+  content: '';
+  position: fixed;
+  inset: auto -10% -20% auto;
+  width: 42rem;
+  height: 42rem;
+  background: radial-gradient(circle, rgba(14, 165, 233, 0.12), transparent 65%);
+  pointer-events: none;
+  z-index: -1;
+  filter: blur(14px);
+}
