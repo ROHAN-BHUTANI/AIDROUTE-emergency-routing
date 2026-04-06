@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Sidebar } from "@/components/dashboard/sidebar"
 import { InputCard } from "@/components/dashboard/input-card"
 import { MapSection } from "@/components/dashboard/map-section"
@@ -18,7 +18,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { optimizeRoute, Hospital, RouteOption } from "@/lib/api"
+import { EmergencyScenario, getLiveAlerts, Hospital, optimizeRoute, RouteOption, SmartAlert } from "@/lib/api"
 import { toast } from "sonner"
 
 export default function Dashboard() {
@@ -30,6 +30,9 @@ export default function Dashboard() {
   const [routes, setRoutes] = useState<RouteOption[]>([])
   const [selectedRouteType, setSelectedRouteType] = useState<"fastest" | "safest">("fastest")
   const [error, setError] = useState<string | null>(null)
+  const [alerts, setAlerts] = useState<SmartAlert[]>([])
+  const [scenario, setScenario] = useState<EmergencyScenario | undefined>()
+  const [loadingStage, setLoadingStage] = useState<string>("")
   const [currentLocation, setCurrentLocation] = useState<{
     latitude: number
     longitude: number
@@ -42,6 +45,7 @@ export default function Dashboard() {
   }) => {
     setError(null)
     setIsLoading(true)
+    setLoadingStage("Analyzing risk...")
 
     try {
       const lat = parseFloat(data.latitude)
@@ -60,9 +64,12 @@ export default function Dashboard() {
       }
 
       const response = await optimizeRoute(lat, lon, data.emergencyType)
+      setLoadingStage("Calculating optimal route...")
 
       setHospital(response.hospital)
       setRoutes(response.routes)
+      setAlerts(response.alerts || [])
+      setScenario(response.scenario)
       setHasRoute(true)
       setSelectedRouteType("fastest")
 
@@ -73,9 +80,33 @@ export default function Dashboard() {
       toast.error(message)
       setHasRoute(false)
     } finally {
+      setLoadingStage("")
       setIsLoading(false)
     }
   }
+
+  useEffect(() => {
+    if (!currentLocation) {
+      return
+    }
+
+    const refresh = async () => {
+      try {
+        const live = await getLiveAlerts(
+          currentLocation.latitude,
+          currentLocation.longitude,
+          "medical"
+        )
+        setAlerts(live.alerts)
+        setScenario(live.scenario)
+      } catch {
+        // Silent polling fallback to keep UX smooth.
+      }
+    }
+
+    const id = window.setInterval(refresh, 18000)
+    return () => window.clearInterval(id)
+  }, [currentLocation])
 
   const handleGeolocation = async () => {
     if (!navigator.geolocation) {
@@ -229,6 +260,12 @@ export default function Dashboard() {
             </div>
           )}
 
+          {isLoading && loadingStage && (
+            <div className="mb-5 rounded-xl border border-primary/25 bg-primary/10 p-4">
+              <p className="text-sm font-medium text-primary">{loadingStage}</p>
+            </div>
+          )}
+
           <div className="grid gap-5 sm:gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
             <div className="space-y-6">
               <InputCard
@@ -241,6 +278,8 @@ export default function Dashboard() {
                 hospital={hospital}
                 routes={routes}
                 selectedRouteType={selectedRouteType}
+                alerts={alerts}
+                scenario={scenario}
                 isLoading={isLoading}
               />
             </div>

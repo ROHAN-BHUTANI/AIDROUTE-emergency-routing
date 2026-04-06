@@ -12,6 +12,7 @@ export interface RouteOption {
   eta: number // in minutes
   risk_score: number
   risk_level: 'low' | 'medium' | 'high'
+  risk_explanation?: string
   recommendation: string
 }
 
@@ -33,7 +34,37 @@ export interface NearbyHospitalsResponse {
 export interface OptimizeRouteResponse {
   hospital: Hospital
   routes: RouteOption[]
-  status: string
+  decision?: DecisionEngineResponse
+  alerts?: SmartAlert[]
+  scenario?: EmergencyScenario
+  status_text?: {
+    risk: string
+    route: string
+  }
+}
+
+export interface EmergencyScenario {
+  title: string
+  summary: string
+  traffic_state: string
+  weather_state: string
+  impact_scope: string
+  updated_at: number
+}
+
+export interface SmartAlert {
+  type: string
+  title: string
+  severity: 'info' | 'warning' | 'critical'
+  message: string
+}
+
+export interface LiveAlertsResponse {
+  alerts: SmartAlert[]
+  scenario: EmergencyScenario
+  risk_score: number
+  emergency_type: string
+  updated_at: number
 }
 
 export interface RiskPredictionResponse {
@@ -341,4 +372,30 @@ export async function decideRoute(
     console.error('Error deciding route:', error)
     throw error
   }
+}
+
+export async function getLiveAlerts(
+  latitude: number,
+  longitude: number,
+  emergencyType = 'medical'
+): Promise<LiveAlertsResponse> {
+  const response = await fetch(`${API_BASE_URL}/live-alerts`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      latitude,
+      longitude,
+      emergency_type: emergencyType,
+    }),
+  })
+
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.message || 'Failed to fetch live alerts')
+  }
+
+  const payload = await response.json()
+  return payload.data as LiveAlertsResponse
 }

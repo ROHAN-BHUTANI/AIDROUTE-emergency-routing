@@ -1,13 +1,6 @@
 import type { Metadata } from 'next'
-import { Manrope } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
-
-const manrope = Manrope({
-  subsets: ["latin"],
-  variable: '--font-manrope',
-  display: 'swap',
-})
 
 export const metadata: Metadata = {
   title: 'AIDROUTE | Emergency Response Command Center',
@@ -39,7 +32,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark">
-      <body className={`${manrope.variable} font-sans antialiased`}>
+      <body className="font-sans antialiased">
         {children}
         <Analytics />
       </body>

@@ -1,14 +1,16 @@
 "use client"
 
 import { Card, CardContent } from "@/components/ui/card"
-import { Clock, Route, AlertTriangle, MessageSquare, Zap, MapPin } from "lucide-react"
+import { Clock, Route, AlertTriangle, MessageSquare, Zap, MapPin, Siren, ShieldAlert } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { RouteOption, Hospital } from "@/lib/api"
+import { EmergencyScenario, RouteOption, Hospital, SmartAlert } from "@/lib/api"
 
 interface AnalyticsCardsProps {
   hospital?: Hospital
   routes?: RouteOption[]
   selectedRouteType?: 'fastest' | 'safest'
+  scenario?: EmergencyScenario
+  alerts?: SmartAlert[]
   isLoading?: boolean
 }
 
@@ -16,6 +18,8 @@ export function AnalyticsCards({
   hospital, 
   routes, 
   selectedRouteType = 'fastest',
+  scenario,
+  alerts = [],
   isLoading 
 }: AnalyticsCardsProps) {
   const isFiniteNumber = (value: unknown): value is number =>
@@ -32,6 +36,7 @@ export function AnalyticsCards({
   const etaValue = selectedRoute?.eta !== undefined ? `${selectedRoute.eta} mins` : "6 mins"
   const hospitalName = hospital?.name || "AIIMS"
   const recommendationValue = selectedRoute?.recommendation || (alternateRoute ? "Alternate route reduces delay by 2 mins" : "Alternate route reduces delay by 2 mins")
+  const riskExplanation = selectedRoute?.risk_explanation || "AI explanation will appear after route intelligence is generated."
 
   const getRiskColor = (level: string | null) => {
     switch (level) {
@@ -182,6 +187,60 @@ export function AnalyticsCards({
         </Card>
       </div>
 
+      {/* Live Scenario & Alerts */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card className="border-border bg-gradient-to-br from-card/80 to-card/40 backdrop-blur-sm">
+          <CardContent className="p-5">
+            <div className="mb-3 flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-cyan-400/30 bg-cyan-500/10">
+                <ShieldAlert className="h-5 w-5 text-cyan-300" />
+              </div>
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Simulation Scenario</p>
+                <p className="text-sm font-semibold text-foreground">{scenario?.title || "Awaiting simulation"}</p>
+              </div>
+            </div>
+            <p className="text-sm leading-relaxed text-muted-foreground">
+              {scenario?.summary || "Run optimization to generate a realistic emergency scenario with risk-linked route intelligence."}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-border bg-gradient-to-br from-card/80 to-card/40 backdrop-blur-sm">
+          <CardContent className="p-5">
+            <div className="mb-3 flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-amber-400/30 bg-amber-500/10">
+                <Siren className="h-5 w-5 text-amber-300" />
+              </div>
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Smart Alerts</p>
+                <p className="text-sm font-semibold text-foreground">Live emergency feed</p>
+              </div>
+            </div>
+            <div className="space-y-2">
+              {alerts.length ? alerts.slice(0, 3).map((alert) => (
+                <div key={alert.type} className="rounded-lg border border-border/80 bg-background/40 p-2.5">
+                  <div className="mb-1 flex items-center justify-between gap-2">
+                    <p className="text-xs font-semibold text-foreground">{alert.title}</p>
+                    <span className={cn(
+                      "rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
+                      alert.severity === "critical" && "bg-red-500/15 text-red-300",
+                      alert.severity === "warning" && "bg-amber-500/15 text-amber-300",
+                      alert.severity === "info" && "bg-cyan-500/15 text-cyan-300",
+                    )}>
+                      {alert.severity}
+                    </span>
+                  </div>
+                  <p className="text-xs leading-relaxed text-muted-foreground">{alert.message}</p>
+                </div>
+              )) : (
+                <p className="text-xs text-muted-foreground">No active alerts. Live feed updates automatically.</p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Emergency Intelligence Panel */}
       <Card className="border-border bg-gradient-to-br from-card/50 to-card/30 backdrop-blur-sm">
         <CardContent className="p-5">
@@ -215,13 +274,17 @@ export function AnalyticsCards({
               <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
                 AI Recommendation
               </p>
-                    <p className="break-words text-sm leading-relaxed text-foreground">
+              <p className="break-words text-sm leading-relaxed text-foreground">
                 {selectedRoute?.recommendation || (
                   <span className="text-muted-foreground italic">
                     Enter route details to receive AI-powered optimization recommendations based on real-time conditions.
                   </span>
                 )}
               </p>
+              <div className="mt-3 rounded-lg border border-primary/20 bg-primary/10 p-3">
+                <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-primary/80">Risk Explanation</p>
+                <p className="text-xs leading-relaxed text-foreground/90">{riskExplanation}</p>
+              </div>
             </div>
           </div>
         </CardContent>

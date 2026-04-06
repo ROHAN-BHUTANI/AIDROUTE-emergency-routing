@@ -1,9 +1,17 @@
 "use client"
 
-import { useEffect, useRef } from "react"
+import { useEffect, useMemo, useRef } from "react"
 import L from "leaflet"
 import "leaflet/dist/leaflet.css"
 import { RouteOption, Hospital } from "@/lib/api"
+
+const isFiniteNumber = (value: unknown): value is number =>
+  typeof value === "number" && Number.isFinite(value)
+
+const hasValidLatLng = (
+  value: { latitude?: number; longitude?: number } | null | undefined
+): value is { latitude: number; longitude: number } =>
+  value != null && isFiniteNumber(value.latitude) && isFiniteNumber(value.longitude)
 
 const defaultIcon = L.icon({
   iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png",
@@ -48,27 +56,29 @@ export default function MapComponent({
   selectedRouteType = "fastest",
   currentLocation,
 }: MapComponentProps) {
-  const isFiniteNumber = (value: unknown): value is number =>
-    typeof value === "number" && Number.isFinite(value)
-
-  const hasValidLatLng = (
-    value: { latitude?: number; longitude?: number } | null | undefined
-  ): value is { latitude: number; longitude: number } =>
-    value != null && isFiniteNumber(value.latitude) && isFiniteNumber(value.longitude)
-
   const mapRef = useRef<L.Map | null>(null)
   const routeLayersRef = useRef<L.Layer[]>([])
   const markerLayersRef = useRef<L.Layer[]>([])
+  const animationRef = useRef<number | null>(null)
+  const ambulanceMarkerRef = useRef<L.Marker | null>(null)
   const mapContainerRef = useRef<HTMLDivElement | null>(null)
 
-  const validCurrentLocation = hasValidLatLng(currentLocation) ? currentLocation : null
-  const validHospital = hasValidLatLng(hospital)
-    ? {
-        latitude: hospital.latitude,
-        longitude: hospital.longitude,
-        name: hospital.name,
-      }
-    : null
+  const validCurrentLocation = useMemo(
+    () => (hasValidLatLng(currentLocation) ? currentLocation : null),
+    [currentLocation]
+  )
+
+  const validHospital = useMemo(
+    () =>
+      hasValidLatLng(hospital)
+        ? {
+            latitude: hospital.latitude,
+            longitude: hospital.longitude,
+            name: hospital.name,
+          }
+        : null,
+    [hospital]
+  )
 
   useEffect(() => {
     if (mapRef.current) {
@@ -99,10 +109,14 @@ export default function MapComponent({
     mapRef.current = map
 
     return () => {
+      if (animationRef.current) {
+        window.clearInterval(animationRef.current)
+      }
       map.remove()
       mapRef.current = null
       routeLayersRef.current = []
       markerLayersRef.current = []
+      ambulanceMarkerRef.current = null
     }
   }, [validCurrentLocation, validHospital])
 
@@ -152,6 +166,14 @@ export default function MapComponent({
 
     routeLayersRef.current.forEach((layer) => map.removeLayer(layer))
     routeLayersRef.current = []
+    if (animationRef.current) {
+      window.clearInterval(animationRef.current)
+      animationRef.current = null
+    }
+    if (ambulanceMarkerRef.current) {
+      map.removeLayer(ambulanceMarkerRef.current)
+      ambulanceMarkerRef.current = null
+    }
 
     if (!routes.length) {
       if (validCurrentLocation) {
@@ -189,6 +211,16 @@ export default function MapComponent({
 
     routeLayersRef.current.push(polyline)
 
+    const routeLabel = L.marker(pathLatLngs[Math.floor(pathLatLngs.length / 2)], {
+      interactive: false,
+      icon: L.divIcon({
+        className: "",
+        html: `<div style="background:rgba(15,23,42,.8);border:1px solid rgba(34,197,94,.35);color:#d1fae5;padding:4px 8px;border-radius:999px;font-size:11px;font-weight:600;">${selectedRouteType === "safest" ? "Safe Route" : "Priority Route"}</div>`,
+      }),
+    }).addTo(map)
+
+    routeLayersRef.current.push(routeLabel)
+
     if (pathLatLngs.length > 0) {
       const [startLat, startLon] = pathLatLngs[0]
       const startMarker = L.marker([startLat, startLon], {
@@ -218,6 +250,46 @@ export default function MapComponent({
       }).addTo(map)
 
       routeLayersRef.current.push(riskCircle)
+
+      const riskZoneLabel = L.marker([startLat, startLon], {
+        interactive: false,
+        icon: L.divIcon({
+          className: "",
+          html: `<div style="background:rgba(127,29,29,.75);border:1px solid rgba(248,113,113,.45);color:#fee2e2;padding:3px 8px;border-radius:999px;font-size:10px;font-weight:700;">High Risk Zone</div>`,
+        }),
+      }).addTo(map)
+
+      routeLayersRef.current.push(riskZoneLabel)
+
+      // Mock heat-map feel using gradient risk bubbles along the route.
+      pathLatLngs.forEach((point, index) => {
+        const opacity = 0.08 + (index / Math.max(pathLatLngs.length, 1)) * 0.2
+        const bubble = L.circle(point, {
+          color: "#f97316",
+          fillColor: "#fb923c",
+          fillOpacity: Math.min(opacity, 0.26),
+          radius: 140 + (index % 3) * 35,
+          weight: 0,
+        }).addTo(map)
+        routeLayersRef.current.push(bubble)
+      })
+
+      // Ambulance animation along route points.
+      const ambulanceIcon = L.divIcon({
+        className: "",
+        html: `<div style="font-size:20px;line-height:1;filter:drop-shadow(0 0 6px rgba(59,130,246,.6));">🚑</div>`,
+      })
+      const ambulance = L.marker(pathLatLngs[0], { icon: ambulanceIcon }).addTo(map)
+      ambulanceMarkerRef.current = ambulance
+
+      let frame = 0
+      animationRef.current = window.setInterval(() => {
+        if (!ambulanceMarkerRef.current || !pathLatLngs.length) {
+          return
+        }
+        frame = (frame + 1) % pathLatLngs.length
+        ambulanceMarkerRef.current.setLatLng(pathLatLngs[frame])
+      }, 800)
     }
 
     const bounds = L.latLngBounds(pathLatLngs.map((p) => L.latLng(p[0], p[1])))

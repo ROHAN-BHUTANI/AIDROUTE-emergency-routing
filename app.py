@@ -11,6 +11,8 @@ from __future__ import annotations
 import json
 import math
 import os
+import random
+import time
 from contextlib import suppress
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -23,7 +25,6 @@ from flask import Flask, jsonify, render_template, request
 from flask_cors import CORS
 
 from models.risk_model import (
-    build_route_risk_insights,
     compute_edge_risk_score,
     compute_route_risk_score,
     compare_routes,
@@ -43,6 +44,8 @@ HOSPITALS_PATH = DATA_DIR / "hospitals.csv"
 POIS_PATH = DATA_DIR / "pois.csv"
 OSRM_ROUTE_URL = "https://router.project-osrm.org/route/v1/driving/{lon1},{lat1};{lon2},{lat2}?overview=full&geometries=geojson"
 OVERPASS_API_URL = "https://overpass-api.de/api/interpreter"
+OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
+OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "meta-llama/llama-3.1-8b-instruct:free")
 
 
 def haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
@@ -184,6 +187,146 @@ def fetch_overpass_hospitals(
 
     hospitals.sort(key=lambda item: item["distance_km"])
     return hospitals[: max(limit, 1)]
+
+
+def _safe_float(value: Any, default: float = 0.0) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _normalize_risk_level(level: str) -> str:
+    normalized = str(level or "").strip().lower()
+    if normalized in {"high", "medium", "low"}:
+        return normalized
+    if normalized == "moderate":
+        return "medium"
+    return "low"
+
+
+def _openrouter_completion(prompt: str) -> Optional[str]:
+    api_key = os.getenv("OPENROUTER_API_KEY", "").strip()
+    if not api_key:
+        return None
+
+    body = {
+        "model": OPENROUTER_MODEL,
+        "messages": [
+            {"role": "system", "content": "You generate concise disaster-routing intelligence text."},
+            {"role": "user", "content": prompt},
+        ],
+        "temperature": 0.35,
+        "max_tokens": 90,
+    }
+
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+        "HTTP-Referer": os.getenv("OPENROUTER_APP_URL", "http://localhost:3000"),
+        "X-Title": "AIDRoute",
+    }
+
+    request = Request(
+        OPENROUTER_API_URL,
+        data=json.dumps(body).encode("utf-8"),
+        headers=headers,
+        method="POST",
+    )
+
+    try:
+        with urlopen(request, timeout=18) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+        choices = payload.get("choices") or []
+        if not choices:
+            return None
+        content = ((choices[0].get("message") or {}).get("content") or "").strip()
+        return content or None
+    except Exception:
+        return None
+
+
+def _risk_explanation(
+    risk_score: float,
+    risk_level: str,
+    emergency_type: str,
+    scenario_title: str,
+) -> str:
+    prompt = (
+        "Write one concise sentence (max 20 words) explaining this emergency route risk. "
+        f"Risk score: {risk_score:.2f}/10. Risk level: {risk_level}. "
+        f"Emergency: {emergency_type}. Scenario: {scenario_title}."
+    )
+    ai_text = _openrouter_completion(prompt)
+    if ai_text:
+        return ai_text
+
+    if risk_level == "high":
+        return "High risk due to severe incident intensity, dense traffic pockets, and constrained emergency corridor access."
+    if risk_level == "medium":
+        return "Moderate risk from mixed traffic pressure and localized disruption near the active emergency zone."
+    return "Low risk with stable mobility conditions and clear path continuity for emergency dispatch."
+
+
+def _simulate_emergency_scenario(emergency_type: str, latitude: float, longitude: float) -> Dict[str, Any]:
+    minute_bucket = int(time.time() // 60)
+    seed = f"{emergency_type}|{round(latitude, 3)}|{round(longitude, 3)}|{minute_bucket}"
+    rng = random.Random(seed)
+
+    traffic_state = rng.choice(["light", "moderate", "heavy"])
+    weather_state = rng.choice(["clear", "rainfall", "storm cells", "low visibility"])
+    impact_state = rng.choice(["localized", "district-wide", "corridor-wide"])
+
+    templates = {
+        "fire": ["Industrial fire near mixed-use block", "Warehouse blaze with smoke spread"],
+        "flood": ["Urban flooding around arterial roads", "Flash flood crossing major corridor"],
+        "earthquake": ["Post-seismic response with debris", "Aftershock-triggered structural hazards"],
+        "landslide": ["Hillside landslide blocking route", "Slope failure near emergency corridor"],
+        "accident": ["Multi-vehicle collision at junction", "High-impact crash with lane blockage"],
+        "medical": ["Mass-casualty medical dispatch", "Critical patient transfer under pressure"],
+    }
+    title = rng.choice(templates.get(emergency_type, templates["medical"]))
+    summary = f"{title} with {traffic_state} traffic, {weather_state}, and {impact_state} operational impact."
+
+    return {
+        "title": title,
+        "summary": summary,
+        "traffic_state": traffic_state,
+        "weather_state": weather_state,
+        "impact_scope": impact_state,
+        "updated_at": int(time.time()),
+    }
+
+
+def _build_dynamic_alerts(risk_score: float, scenario: Dict[str, Any]) -> List[Dict[str, Any]]:
+    severity = "critical" if risk_score >= 7 else "warning" if risk_score >= 4 else "info"
+    base_alerts = [
+        {
+            "type": "flood_warning",
+            "title": "Flood Warning",
+            "severity": "critical" if scenario.get("weather_state") in {"rainfall", "storm cells"} else "info",
+            "message": "Waterlogging risk rising on low-lying routes."
+            if scenario.get("weather_state") in {"rainfall", "storm cells"}
+            else "No active flood stress indicators.",
+        },
+        {
+            "type": "traffic_congestion",
+            "title": "Traffic Congestion",
+            "severity": "warning" if scenario.get("traffic_state") in {"moderate", "heavy"} else "info",
+            "message": "Congestion clusters detected near response corridor."
+            if scenario.get("traffic_state") in {"moderate", "heavy"}
+            else "Traffic flow currently stable.",
+        },
+        {
+            "type": "fire_risk",
+            "title": "Fire Risk",
+            "severity": severity,
+            "message": "Elevated fire propagation risk due to ongoing hazardous conditions."
+            if risk_score >= 7
+            else "Fire risk monitored; maintain standby suppression support.",
+        },
+    ]
+    return base_alerts
 
 
 class EmergencyRoutingService:
@@ -644,7 +787,12 @@ def _to_title_risk_level(band: str) -> str:
     return mapping.get(normalized, "Low")
 
 
-def _format_route_for_optimize(route_type: str, route_data: Dict[str, Any], emergency_type: str) -> Dict[str, Any]:
+def _format_route_for_optimize(
+    route_type: str,
+    route_data: Dict[str, Any],
+    emergency_type: str,
+    scenario_title: str,
+) -> Dict[str, Any]:
     route_coordinates = route_data.get("route_coordinates", [])
     evaluation = evaluate_emergency_risk(
         route_coordinates=route_coordinates,
@@ -655,7 +803,8 @@ def _format_route_for_optimize(route_type: str, route_data: Dict[str, Any], emer
     )
 
     route_risk_score = float(evaluation.get("risk_score", 0.0))
-    route_risk_level = str(evaluation.get("risk_level", "Low"))
+    route_risk_level = _normalize_risk_level(str(evaluation.get("risk_level", "Low")))
+    explanation = _risk_explanation(route_risk_score, route_risk_level, emergency_type, scenario_title)
 
     return {
         "type": route_type,
@@ -664,6 +813,7 @@ def _format_route_for_optimize(route_type: str, route_data: Dict[str, Any], emer
         "eta": int(route_data.get("estimated_time_min", 0)),
         "risk_score": route_risk_score,
         "risk_level": route_risk_level,
+        "risk_explanation": explanation,
         "recommendation": recommendation,
     }
 
@@ -888,6 +1038,30 @@ def decision_engine_api():
         return error_response(f"Unexpected server error: {exc}", 500)
 
 
+@app.route("/live-alerts", methods=["POST"])
+def live_alerts_api():
+    try:
+        latitude, longitude, emergency_type = parse_payload(request.get_json(silent=True))
+        route_bundle = service.route_options_to_hospital(latitude, longitude, emergency_type)
+        baseline_risk = _safe_float(route_bundle.get("risk_score"), 0.0)
+        scenario = _simulate_emergency_scenario(emergency_type, latitude, longitude)
+        alerts = _build_dynamic_alerts(baseline_risk, scenario)
+
+        return success_response(
+            {
+                "alerts": alerts,
+                "scenario": scenario,
+                "risk_score": baseline_risk,
+                "emergency_type": emergency_type,
+                "updated_at": int(time.time()),
+            }
+        )
+    except ValueError as exc:
+        return error_response(str(exc), 400)
+    except Exception as exc:
+        return error_response(f"Unexpected server error: {exc}", 500)
+
+
 @app.route("/optimize-route", methods=["POST"])
 def optimize_route_api():
     """Return nearest hospital and fastest/safest route options in a clean JSON schema."""
@@ -915,6 +1089,7 @@ def optimize_route_api():
 
         fastest_route = route_bundle.get("fastest_route", {})
         safest_route = route_bundle.get("safest_route", {})
+        scenario = _simulate_emergency_scenario(emergency_type, latitude, longitude)
 
         if osrm_route:
             fastest_route = {
@@ -949,11 +1124,26 @@ def optimize_route_api():
         response = {
             "hospital": hospital,
             "routes": [
-                _format_route_for_optimize("fastest", fastest_route, emergency_type),
-                _format_route_for_optimize("safest", safest_route, emergency_type),
+                _format_route_for_optimize("fastest", fastest_route, emergency_type, scenario["title"]),
+                _format_route_for_optimize("safest", safest_route, emergency_type, scenario["title"]),
             ],
             "decision": decision,
+            "scenario": scenario,
+            "alerts": _build_dynamic_alerts(
+                _safe_float(decision.get("best_route", {}).get("risk_score"), 0.0),
+                scenario,
+            ),
+            "status_text": {
+                "risk": "Analyzing risk intelligence...",
+                "route": "Calculating optimal route...",
+            },
         }
+
+        # Keep frontend compatibility with expected hospital keys.
+        response["hospital"]["latitude"] = response["hospital"].pop("lat")
+        response["hospital"]["longitude"] = response["hospital"].pop("lon")
+        response["hospital"]["distance_km"] = _safe_float(route_bundle.get("nearest_hospital_distance_km"), 0.0)
+
         return jsonify(response), 200
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
