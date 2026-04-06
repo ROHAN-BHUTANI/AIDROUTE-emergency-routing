@@ -106,7 +106,7 @@ export function RouteComparison({
                     </h3>
                   </div>
 
-                  <div className="mb-4 grid grid-cols-3 gap-3">
+                  <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
                     <div className="space-y-1">
                       <div className="flex items-center gap-1 text-muted-foreground">
                         <Clock className="h-3.5 w-3.5" />
@@ -145,7 +145,7 @@ export function RouteComparison({
                     <p className="text-xs font-medium text-muted-foreground">
                       Risk Score: {route.risk_score}/10
                     </p>
-                    <p className="text-sm text-muted-foreground leading-relaxed line-clamp-2">
+                    <p className="break-words text-sm leading-relaxed text-muted-foreground sm:line-clamp-2">
                       {route.recommendation}
                     </p>
                   </div>

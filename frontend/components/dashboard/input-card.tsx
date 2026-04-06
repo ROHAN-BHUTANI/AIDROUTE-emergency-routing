@@ -116,11 +116,11 @@ export function InputCard({ onOptimize, isLoading, isLocating, onLocationClick }
             </Select>
           </div>
 
-          <div className="flex gap-2">
+          <div className="sticky bottom-2 z-10 -mx-1 mt-2 flex flex-col gap-2 rounded-xl border border-border/60 bg-background/80 p-2 backdrop-blur sm:static sm:z-auto sm:mx-0 sm:mt-0 sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none sm:flex-row">
             <Button
               type="button"
               variant="outline"
-              className="flex-1 border-border hover:bg-primary/5"
+              className="h-11 w-full border-border hover:bg-primary/5 sm:flex-1"
               disabled={isLoading || isLocating}
               onClick={onLocationClick}
             >
@@ -129,7 +129,7 @@ export function InputCard({ onOptimize, isLoading, isLocating, onLocationClick }
             </Button>
             <Button
               type="submit"
-              className="flex-1 bg-gradient-to-r from-primary to-primary/80 font-medium text-primary-foreground shadow-lg shadow-primary/25 transition-all hover:shadow-xl hover:shadow-primary/30"
+              className="h-11 w-full bg-gradient-to-r from-primary to-primary/80 font-medium text-primary-foreground shadow-lg shadow-primary/25 transition-all hover:shadow-xl hover:shadow-primary/30 sm:flex-1"
               disabled={isLoading || isLocating}
             >
               {isLoading ? (

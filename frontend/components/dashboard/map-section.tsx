@@ -46,14 +46,14 @@ export function MapSection({
 
   return (
     <Card className="flex h-full flex-col border-border bg-card/50 backdrop-blur-sm">
-      <CardHeader className="flex-row items-center justify-between pb-4">
+      <CardHeader className="flex flex-col gap-3 pb-4 sm:flex-row sm:items-center sm:justify-between">
         <CardTitle className="flex items-center gap-2 text-lg font-semibold">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
             <Map className="h-4 w-4 text-primary" />
           </div>
           Route Map
         </CardTitle>
-        <div className="flex items-center gap-1">
+        <div className="flex flex-wrap items-center gap-1">
           <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground">
             <Layers className="h-4 w-4" />
           </Button>
@@ -63,10 +63,7 @@ export function MapSection({
         </div>
       </CardHeader>
       <CardContent className="relative flex-1 p-4 pt-0">
-        <div
-          id="map-container"
-          className="relative h-full min-h-[400px] w-full overflow-hidden rounded-xl border border-border bg-background"
-        >
+        <div className="relative h-full min-h-[320px] overflow-hidden rounded-xl border border-border bg-background sm:min-h-[400px]">
           {hasMapData ? (
             <DynamicMapComponent
               hospital={hospital}

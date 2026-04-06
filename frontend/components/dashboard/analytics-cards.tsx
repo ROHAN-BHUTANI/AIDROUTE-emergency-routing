@@ -90,7 +90,7 @@ export function AnalyticsCards({
 
   return (
     <div className="space-y-4">
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2">
         {cards.map((card) => (
           <Card
             key={card.title}
@@ -105,7 +105,7 @@ export function AnalyticsCards({
                   <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
                     {card.title}
                   </p>
-                  <div className="flex items-baseline gap-1">
+                  <div className="flex flex-wrap items-baseline gap-1">
                     <span
                       className={cn(
                         "text-2xl font-bold tracking-tight",
@@ -212,7 +212,7 @@ export function AnalyticsCards({
               <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
                 AI Recommendation
               </p>
-              <p className="text-sm leading-relaxed text-foreground">
+                    <p className="break-words text-sm leading-relaxed text-foreground">
                 {selectedRoute?.recommendation || (
                   <span className="text-muted-foreground italic">
                     Enter route details to receive AI-powered optimization recommendations based on real-time conditions.

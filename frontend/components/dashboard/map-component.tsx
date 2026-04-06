@@ -50,14 +50,14 @@ export default function MapComponent({
   const mapRef = useRef<L.Map | null>(null)
   const routeLayersRef = useRef<L.Layer[]>([])
   const markerLayersRef = useRef<L.Layer[]>([])
+  const mapContainerRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
     if (mapRef.current) {
       return
     }
 
-    const container = document.getElementById("map-container")
-    if (!container) {
+    if (!mapContainerRef.current) {
       return
     }
 
@@ -67,7 +67,10 @@ export default function MapComponent({
         ? [hospital.latitude, hospital.longitude]
         : [0, 0]
 
-    const map = L.map("map-container").setView(initialCenter as [number, number], currentLocation || hospital ? 13 : 2)
+    const map = L.map(mapContainerRef.current).setView(
+      initialCenter as [number, number],
+      currentLocation || hospital ? 13 : 2
+    )
 
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       attribution:
@@ -199,7 +202,7 @@ export default function MapComponent({
 
   return (
     <div
-      id="map-container"
+      ref={mapContainerRef}
       className="h-full w-full"
       style={{ position: "relative" }}
     />
