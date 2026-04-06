@@ -3,7 +3,8 @@
  * Handles all HTTP requests to the emergency routing optimizer
  */
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'
+// Use Next.js rewrite proxy by default so users only need the frontend URL.
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '/api/backend'
 
 export interface RouteOption {
   type: 'fastest' | 'safest'
