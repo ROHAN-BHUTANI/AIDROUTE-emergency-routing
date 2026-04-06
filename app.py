@@ -1039,6 +1039,8 @@ def decision_engine_api():
 
 
 @app.route("/live-alerts", methods=["POST"])
+@app.route("/live-alerts/", methods=["POST"])
+@app.route("/live_alerts", methods=["POST"])
 def live_alerts_api():
     try:
         latitude, longitude, emergency_type = parse_payload(request.get_json(silent=True))
