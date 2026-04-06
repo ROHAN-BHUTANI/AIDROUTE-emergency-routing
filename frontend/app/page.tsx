@@ -210,6 +210,15 @@ export default function Dashboard() {
               variant="ghost"
               size="icon"
               className="relative h-10 w-10 shrink-0 text-muted-foreground hover:text-foreground"
+              onClick={() => {
+                const activeAlerts = alerts.filter((a) => a.severity !== "info").length
+                toast.info(
+                  activeAlerts
+                    ? `${activeAlerts} actionable alert${activeAlerts > 1 ? "s" : ""} in live feed.`
+                    : "No actionable alerts right now."
+                )
+              }}
+              aria-label="Open live alerts summary"
             >
               <Bell className="h-5 w-5" />
               <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-destructive" />

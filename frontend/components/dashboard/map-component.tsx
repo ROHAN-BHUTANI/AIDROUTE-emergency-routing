@@ -44,6 +44,7 @@ interface MapComponentProps {
   hospital?: Hospital
   routes?: RouteOption[]
   selectedRouteType?: "fastest" | "safest"
+  showRiskOverlay?: boolean
   currentLocation?: {
     latitude: number
     longitude: number
@@ -54,6 +55,7 @@ export default function MapComponent({
   hospital,
   routes = [],
   selectedRouteType = "fastest",
+  showRiskOverlay = true,
   currentLocation,
 }: MapComponentProps) {
   const mapRef = useRef<L.Map | null>(null)
@@ -240,39 +242,41 @@ export default function MapComponent({
             ? "#f59e0b"
             : "#ef4444"
 
-      const riskCircle = L.circle([startLat, startLon], {
-        color: riskCircleColor,
-        fill: true,
-        fillColor: riskCircleColor,
-        fillOpacity: 0.1,
-        radius: 500, // 500 meters
-        weight: 2,
-      }).addTo(map)
-
-      routeLayersRef.current.push(riskCircle)
-
-      const riskZoneLabel = L.marker([startLat, startLon], {
-        interactive: false,
-        icon: L.divIcon({
-          className: "",
-          html: `<div style="background:rgba(127,29,29,.75);border:1px solid rgba(248,113,113,.45);color:#fee2e2;padding:3px 8px;border-radius:999px;font-size:10px;font-weight:700;">High Risk Zone</div>`,
-        }),
-      }).addTo(map)
-
-      routeLayersRef.current.push(riskZoneLabel)
-
-      // Mock heat-map feel using gradient risk bubbles along the route.
-      pathLatLngs.forEach((point, index) => {
-        const opacity = 0.08 + (index / Math.max(pathLatLngs.length, 1)) * 0.2
-        const bubble = L.circle(point, {
-          color: "#f97316",
-          fillColor: "#fb923c",
-          fillOpacity: Math.min(opacity, 0.26),
-          radius: 140 + (index % 3) * 35,
-          weight: 0,
+      if (showRiskOverlay) {
+        const riskCircle = L.circle([startLat, startLon], {
+          color: riskCircleColor,
+          fill: true,
+          fillColor: riskCircleColor,
+          fillOpacity: 0.1,
+          radius: 500,
+          weight: 2,
         }).addTo(map)
-        routeLayersRef.current.push(bubble)
-      })
+
+        routeLayersRef.current.push(riskCircle)
+
+        const riskZoneLabel = L.marker([startLat, startLon], {
+          interactive: false,
+          icon: L.divIcon({
+            className: "",
+            html: `<div style="background:rgba(127,29,29,.75);border:1px solid rgba(248,113,113,.45);color:#fee2e2;padding:3px 8px;border-radius:999px;font-size:10px;font-weight:700;">High Risk Zone</div>`,
+          }),
+        }).addTo(map)
+
+        routeLayersRef.current.push(riskZoneLabel)
+
+        // Mock heat-map feel using gradient risk bubbles along the route.
+        pathLatLngs.forEach((point, index) => {
+          const opacity = 0.08 + (index / Math.max(pathLatLngs.length, 1)) * 0.2
+          const bubble = L.circle(point, {
+            color: "#f97316",
+            fillColor: "#fb923c",
+            fillOpacity: Math.min(opacity, 0.26),
+            radius: 140 + (index % 3) * 35,
+            weight: 0,
+          }).addTo(map)
+          routeLayersRef.current.push(bubble)
+        })
+      }
 
       // Ambulance animation along route points.
       const ambulanceIcon = L.divIcon({
@@ -294,7 +298,7 @@ export default function MapComponent({
 
     const bounds = L.latLngBounds(pathLatLngs.map((p) => L.latLng(p[0], p[1])))
     map.fitBounds(bounds, { padding: [50, 50] })
-  }, [routes, selectedRouteType, validCurrentLocation, validHospital])
+  }, [routes, selectedRouteType, showRiskOverlay, validCurrentLocation, validHospital])
 
   return (
     <div

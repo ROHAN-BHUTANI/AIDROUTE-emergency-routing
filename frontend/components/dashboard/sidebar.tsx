@@ -14,19 +14,20 @@ import {
 } from "lucide-react"
 
 const navItems = [
-  { icon: LayoutDashboard, label: "Dashboard", href: "#", active: true },
-  { icon: BarChart3, label: "Analytics", href: "#" },
-  { icon: Route, label: "Routes", href: "#" },
+  { icon: LayoutDashboard, label: "Dashboard" },
+  { icon: BarChart3, label: "Analytics" },
+  { icon: Route, label: "Routes" },
 ]
 
 const bottomNavItems = [
-  { icon: Bell, label: "Notifications", href: "#" },
-  { icon: HelpCircle, label: "Help & Support", href: "#" },
-  { icon: Settings, label: "Settings", href: "#" },
+  { icon: Bell, label: "Notifications" },
+  { icon: HelpCircle, label: "Help & Support" },
+  { icon: Settings, label: "Settings" },
 ]
 
 export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false)
+  const [activeItem, setActiveItem] = useState("Dashboard")
 
   return (
     <aside
@@ -55,34 +56,43 @@ export function Sidebar() {
         <div className="mb-2 px-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">
           {!collapsed && "Main"}
         </div>
-        {navItems.map((item) => (
-          <a
+        {navItems.map((item) => {
+          const isActive = activeItem === item.label
+          return (
+          <button
             key={item.label}
-            href={item.href}
+            type="button"
+            onClick={() => setActiveItem(item.label)}
             className={cn(
-              "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 hover:bg-sidebar-accent",
-              item.active
+              "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-all duration-200 hover:bg-sidebar-accent",
+              isActive
                 ? "bg-sidebar-accent text-sidebar-primary"
                 : "text-sidebar-foreground/70 hover:text-sidebar-foreground"
             )}
           >
-            <item.icon className={cn("h-5 w-5 shrink-0", item.active && "text-primary")} />
+            <item.icon className={cn("h-5 w-5 shrink-0", isActive && "text-primary")} />
             {!collapsed && <span>{item.label}</span>}
-          </a>
-        ))}
+          </button>
+        )})}
       </nav>
 
       {/* Bottom Navigation */}
       <div className="border-t border-sidebar-border p-3">
         {bottomNavItems.map((item) => (
-          <a
+          <button
             key={item.label}
-            href={item.href}
-            className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-sidebar-foreground/70 transition-all duration-200 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+            type="button"
+            onClick={() => setActiveItem(item.label)}
+            className={cn(
+              "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-all duration-200 hover:bg-sidebar-accent hover:text-sidebar-foreground",
+              activeItem === item.label
+                ? "bg-sidebar-accent text-sidebar-primary"
+                : "text-sidebar-foreground/70"
+            )}
           >
             <item.icon className="h-5 w-5 shrink-0" />
             {!collapsed && <span>{item.label}</span>}
-          </a>
+          </button>
         ))}
       </div>
 
