@@ -35,6 +35,16 @@ This project showcases applied AI for high-impact public safety use cases and de
 - Scenario benchmarking suite to track model quality over time.
 - Containerized deployment and monitoring pipeline for production readiness.
 
+## Local Run
+On Windows, use the Python launcher that is already working in this environment:
+
+```bat
+py -m venv .venv
+call .venv\Scripts\activate.bat
+py -m pip install -r requirements.txt
+py app.py
+```
+
 ## Repository Structure
 ```text
 AIDRoute/
