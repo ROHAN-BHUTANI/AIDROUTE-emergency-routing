@@ -34,3 +34,19 @@ This project showcases applied AI for high-impact public safety use cases and de
 - Explainable AI layer to surface why a route was selected.
 - Scenario benchmarking suite to track model quality over time.
 - Containerized deployment and monitoring pipeline for production readiness.
+
+## Repository Structure
+```text
+AIDRoute/
+├── app.py
+├── routing.py
+├── data/
+├── models/
+├── requirements.txt
+├── README.md
+├── scripts/
+├── docs/
+├── static/
+├── templates/
+└── frontend/
+```

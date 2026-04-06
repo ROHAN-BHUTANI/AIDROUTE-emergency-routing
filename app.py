@@ -22,7 +22,7 @@ import pandas as pd
 from flask import Flask, jsonify, render_template, request
 from flask_cors import CORS
 
-from risk_model import (
+from models.risk_model import (
     build_route_risk_insights,
     compute_edge_risk_score,
     compute_route_risk_score,
@@ -31,7 +31,7 @@ from risk_model import (
     estimate_traffic_score,
     risk_band,
 )
-from routing import dijkstra, generate_demo_route_options
+from routing import build_demo_city_graph, dijkstra, generate_demo_route_options
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -201,6 +201,8 @@ class EmergencyRoutingService:
         self.hospitals = self._load_hospitals()
 
     def _load_locations(self) -> Dict[int, Tuple[float, float]]:
+        if not LOCATIONS_PATH.exists():
+            return {}
         locations_df = pd.read_csv(LOCATIONS_PATH, usecols=["osmid", "y", "x"])
         return {
             int(row.osmid): (float(row.y), float(row.x))
@@ -208,6 +210,11 @@ class EmergencyRoutingService:
         }
 
     def _load_graph(self) -> nx.DiGraph:
+        if not ROADS_PATH.exists():
+            demo_graph, demo_node_coords = build_demo_city_graph()
+            self.node_coords = demo_node_coords
+            return demo_graph
+
         roads_df = pd.read_csv(ROADS_PATH)
 
         u_col = "u" if "u" in roads_df.columns else roads_df.columns[0]
