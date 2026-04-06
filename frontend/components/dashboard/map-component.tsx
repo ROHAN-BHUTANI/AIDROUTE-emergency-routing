@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react"
 import L from "leaflet"
+import "leaflet/dist/leaflet.css"
 import { RouteOption, Hospital } from "@/lib/api"
 
 const defaultIcon = L.icon({
@@ -163,7 +164,7 @@ export default function MapComponent({
 
     // Find the selected route
     const selectedRoute = routes.find((r) => r.type === selectedRouteType)
-    if (!selectedRoute) return
+    if (!selectedRoute || !Array.isArray(selectedRoute.path)) return
 
     // Draw route polyline
     const pathLatLngs = selectedRoute.path
@@ -188,9 +189,9 @@ export default function MapComponent({
 
     routeLayersRef.current.push(polyline)
 
-    if (selectedRoute.path.length > 0) {
-      const startPoint = selectedRoute.path[0]
-      const startMarker = L.marker([startPoint[0], startPoint[1]], {
+    if (pathLatLngs.length > 0) {
+      const [startLat, startLon] = pathLatLngs[0]
+      const startMarker = L.marker([startLat, startLon], {
         icon: activeRouteIcon,
       })
         .addTo(map)
@@ -207,7 +208,7 @@ export default function MapComponent({
             ? "#f59e0b"
             : "#ef4444"
 
-      const riskCircle = L.circle([startPoint[0], startPoint[1]], {
+      const riskCircle = L.circle([startLat, startLon], {
         color: riskCircleColor,
         fill: true,
         fillColor: riskCircleColor,
