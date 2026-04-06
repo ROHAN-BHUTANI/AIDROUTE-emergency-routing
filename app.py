@@ -193,6 +193,7 @@ class EmergencyRoutingService:
         self.graph: nx.DiGraph = nx.DiGraph()
         self.node_coords: Dict[int, Tuple[float, float]] = {}
         self.hospitals: List[Dict[str, Any]] = []
+        self.using_demo_data = False
         self._load_data()
 
     def _load_data(self) -> None:
@@ -202,6 +203,7 @@ class EmergencyRoutingService:
 
     def _load_locations(self) -> Dict[int, Tuple[float, float]]:
         if not LOCATIONS_PATH.exists():
+            self.using_demo_data = True
             return {}
         locations_df = pd.read_csv(LOCATIONS_PATH, usecols=["osmid", "y", "x"])
         return {
@@ -211,6 +213,7 @@ class EmergencyRoutingService:
 
     def _load_graph(self) -> nx.DiGraph:
         if not ROADS_PATH.exists():
+            self.using_demo_data = True
             demo_graph, demo_node_coords = build_demo_city_graph()
             self.node_coords = demo_node_coords
             return demo_graph
