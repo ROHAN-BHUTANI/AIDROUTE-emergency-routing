@@ -18,6 +18,9 @@ export function AnalyticsCards({
   selectedRouteType = 'fastest',
   isLoading 
 }: AnalyticsCardsProps) {
+  const isFiniteNumber = (value: unknown): value is number =>
+    typeof value === "number" && Number.isFinite(value)
+
   const selectedRoute = routes?.find(r => r.type === selectedRouteType)
   const alternateRoute = routes?.find(r => r.type !== selectedRouteType)
   const trafficLabel = (() => {
@@ -66,7 +69,7 @@ export function AnalyticsCards({
     },
     {
       title: "Distance",
-      value: selectedRoute?.distance !== undefined ? `${selectedRoute.distance.toFixed(1)}` : "—",
+      value: isFiniteNumber(selectedRoute?.distance) ? `${selectedRoute.distance.toFixed(1)}` : "—",
       unit: "km",
       icon: Route,
       description: "Total route distance",
@@ -148,7 +151,7 @@ export function AnalyticsCards({
                   {hospital?.name || "—"}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  {hospital ? `${hospital.distance_km.toFixed(1)} km away` : "—"}
+                  {isFiniteNumber(hospital?.distance_km) ? `${hospital.distance_km.toFixed(1)} km away` : "—"}
                 </p>
               </div>
             </div>
