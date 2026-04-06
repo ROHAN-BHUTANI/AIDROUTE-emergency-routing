@@ -47,10 +47,27 @@ export default function MapComponent({
   selectedRouteType = "fastest",
   currentLocation,
 }: MapComponentProps) {
+  const isFiniteNumber = (value: unknown): value is number =>
+    typeof value === "number" && Number.isFinite(value)
+
+  const hasValidLatLng = (
+    value: { latitude?: number; longitude?: number } | null | undefined
+  ): value is { latitude: number; longitude: number } =>
+    value != null && isFiniteNumber(value.latitude) && isFiniteNumber(value.longitude)
+
   const mapRef = useRef<L.Map | null>(null)
   const routeLayersRef = useRef<L.Layer[]>([])
   const markerLayersRef = useRef<L.Layer[]>([])
   const mapContainerRef = useRef<HTMLDivElement | null>(null)
+
+  const validCurrentLocation = hasValidLatLng(currentLocation) ? currentLocation : null
+  const validHospital = hasValidLatLng(hospital)
+    ? {
+        latitude: hospital.latitude,
+        longitude: hospital.longitude,
+        name: hospital.name,
+      }
+    : null
 
   useEffect(() => {
     if (mapRef.current) {
@@ -61,15 +78,15 @@ export default function MapComponent({
       return
     }
 
-    const initialCenter = currentLocation
-      ? [currentLocation.latitude, currentLocation.longitude]
-      : hospital
-        ? [hospital.latitude, hospital.longitude]
+    const initialCenter = validCurrentLocation
+      ? [validCurrentLocation.latitude, validCurrentLocation.longitude]
+      : validHospital
+        ? [validHospital.latitude, validHospital.longitude]
         : [0, 0]
 
     const map = L.map(mapContainerRef.current).setView(
       initialCenter as [number, number],
-      currentLocation || hospital ? 13 : 2
+      validCurrentLocation || validHospital ? 13 : 2
     )
 
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -86,7 +103,7 @@ export default function MapComponent({
       routeLayersRef.current = []
       markerLayersRef.current = []
     }
-  }, [currentLocation, hospital])
+  }, [validCurrentLocation, validHospital])
 
   useEffect(() => {
     if (!mapRef.current) {
@@ -98,22 +115,22 @@ export default function MapComponent({
     markerLayersRef.current.forEach((layer) => map.removeLayer(layer))
     markerLayersRef.current = []
 
-    if (hospital) {
-      const hospitalMarker = L.marker([hospital.latitude, hospital.longitude], { icon: hospitalIcon })
+    if (validHospital) {
+      const hospitalMarker = L.marker([validHospital.latitude, validHospital.longitude], { icon: hospitalIcon })
         .addTo(map)
-        .bindPopup(`<strong>${hospital.name}</strong><br/>Hospital`)
+        .bindPopup(`<strong>${validHospital.name}</strong><br/>Hospital`)
 
       markerLayersRef.current.push(hospitalMarker)
     }
 
-    if (currentLocation) {
-      const currentMarker = L.marker([currentLocation.latitude, currentLocation.longitude], { icon: defaultIcon })
+    if (validCurrentLocation) {
+      const currentMarker = L.marker([validCurrentLocation.latitude, validCurrentLocation.longitude], { icon: defaultIcon })
         .addTo(map)
         .bindPopup(
-          `<strong>Your Location</strong><br/>Lat: ${currentLocation.latitude.toFixed(6)}<br/>Lng: ${currentLocation.longitude.toFixed(6)}`
+          `<strong>Your Location</strong><br/>Lat: ${validCurrentLocation.latitude.toFixed(6)}<br/>Lng: ${validCurrentLocation.longitude.toFixed(6)}`
         )
 
-      const locationCircle = L.circle([currentLocation.latitude, currentLocation.longitude], {
+      const locationCircle = L.circle([validCurrentLocation.latitude, validCurrentLocation.longitude], {
         color: "#3b82f6",
         fill: true,
         fillColor: "#3b82f6",
@@ -124,7 +141,7 @@ export default function MapComponent({
 
       markerLayersRef.current.push(currentMarker, locationCircle)
     }
-  }, [currentLocation, hospital])
+  }, [validCurrentLocation, validHospital])
 
   // Update route visualization when routes or selectedRouteType changes
   useEffect(() => {
@@ -136,10 +153,10 @@ export default function MapComponent({
     routeLayersRef.current = []
 
     if (!routes.length) {
-      if (currentLocation) {
-        map.setView([currentLocation.latitude, currentLocation.longitude], 14)
-      } else if (hospital) {
-        map.setView([hospital.latitude, hospital.longitude], 13)
+      if (validCurrentLocation) {
+        map.setView([validCurrentLocation.latitude, validCurrentLocation.longitude], 14)
+      } else if (validHospital) {
+        map.setView([validHospital.latitude, validHospital.longitude], 13)
       }
       return
     }
@@ -149,7 +166,13 @@ export default function MapComponent({
     if (!selectedRoute) return
 
     // Draw route polyline
-    const pathLatLngs = selectedRoute.path.map(([lat, lon]) => [lat, lon] as [number, number])
+    const pathLatLngs = selectedRoute.path
+      .filter(([lat, lon]) => isFiniteNumber(lat) && isFiniteNumber(lon))
+      .map(([lat, lon]) => [lat, lon] as [number, number])
+
+    if (!pathLatLngs.length) {
+      return
+    }
     const polylineColor =
       selectedRouteType === "fastest"
         ? "#3b82f6" // blue
@@ -172,7 +195,7 @@ export default function MapComponent({
       })
         .addTo(map)
         .bindPopup(
-          `<strong>Start Point</strong><br/>Distance: ${selectedRoute.distance.toFixed(2)} km<br/>ETA: ${selectedRoute.eta} min`
+          `<strong>Start Point</strong><br/>Distance: ${isFiniteNumber(selectedRoute.distance) ? selectedRoute.distance.toFixed(2) : "—"} km<br/>ETA: ${selectedRoute.eta} min`
         )
 
         routeLayersRef.current.push(startMarker)
@@ -198,7 +221,7 @@ export default function MapComponent({
 
     const bounds = L.latLngBounds(pathLatLngs.map((p) => L.latLng(p[0], p[1])))
     map.fitBounds(bounds, { padding: [50, 50] })
-  }, [routes, selectedRouteType, currentLocation, hospital])
+  }, [routes, selectedRouteType, validCurrentLocation, validHospital])
 
   return (
     <div

@@ -188,7 +188,7 @@ export default function Dashboard() {
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="flex items-center gap-2 px-2">
                   <Avatar className="h-8 w-8">
-                    <AvatarImage src="/placeholder-avatar.jpg" alt="User" />
+                    <AvatarImage src="/placeholder-user.jpg" alt="User" />
                     <AvatarFallback className="bg-primary text-primary-foreground">JD</AvatarFallback>
                   </Avatar>
                   <div className="hidden text-left sm:block">
