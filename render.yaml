@@ -1,0 +1,39 @@
+services:
+  - type: web
+    name: aidroute-backend
+    env: python
+    plan: free
+    
+    # ========================================================================
+    # Build & Deployment
+    # ========================================================================
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --timeout 120
+    
+    # ========================================================================
+    # Python Configuration
+    # ========================================================================
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11"
+      - key: FLASK_HOST
+        value: "0.0.0.0"
+      - key: FLASK_DEBUG
+        value: "false"
+      
+      # ====================================================================
+      # Add these in Render Dashboard after deployment (SECRETS)
+      # ====================================================================
+      # GEMINI_API_KEY (optional)
+      # OPENROUTER_API_KEY (optional)
+    
+    # ========================================================================
+    # Health Check (Render will use this to detect if service is up)
+    # ========================================================================
+    healthCheckPath: /health
+    healthCheckInterval: 300  # 5 minutes
+    
+    # ========================================================================
+    # Auto-Deploy from GitHub
+    # ========================================================================
+    autoDeploy: true

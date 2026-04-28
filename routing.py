@@ -57,10 +57,18 @@ def dijkstra(
     start: Hashable,
     end: Hashable,
     risk_factor: float = 1.0,
+    blocked_edges: Optional[Iterable[Tuple[Hashable, Hashable]]] = None,
 ) -> Tuple[float, List[Hashable]]:
     """Return shortest risk-adjusted path and distance using a binary heap."""
     if start not in graph or end not in graph:
         return math.inf, []
+
+    # Map blocked edges for O(1) lookup
+    blocked = set()
+    if blocked_edges:
+        for u, v in blocked_edges:
+            blocked.add((u, v))
+            blocked.add((v, u)) # Assume symmetry for simulation
 
     distances: Dict[Hashable, float] = {start: 0.0}
     previous: Dict[Hashable, Optional[Hashable]] = {start: None}
@@ -76,6 +84,9 @@ def dijkstra(
             break
 
         for neighbor, edge_data in _iter_neighbors(graph, current_node):
+            if (current_node, neighbor) in blocked:
+                continue
+
             edge_cost = _effective_edge_cost(edge_data, risk_factor=risk_factor)
             candidate_distance = current_distance + edge_cost
 

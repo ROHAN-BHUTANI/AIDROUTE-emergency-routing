@@ -24,6 +24,41 @@ export interface Hospital {
   distance_km: number
 }
 
+export interface DisasterAnalysis {
+  severity: 'low' | 'medium' | 'high'
+  summary?: string
+  indicators?: string[]
+  confidence?: number
+  provider?: string
+}
+
+export interface ResourceAllocationItem {
+  resource: string
+  units: number
+}
+
+export interface RecommendedAction {
+  severity: 'low' | 'medium' | 'high'
+  priority?: string
+  resource_allocation?: ResourceAllocationItem[]
+  summary?: string
+  provider?: string
+}
+
+export interface RouteExplanation {
+  route_name: string
+  risk_level: 'low' | 'medium' | 'high'
+  explanation: string
+  reasons?: string[]
+  provider?: string
+}
+
+export interface AIInsights {
+  disaster_analysis?: DisasterAnalysis
+  recommended_action?: RecommendedAction
+  route_explanation?: RouteExplanation
+}
+
 export interface NearbyHospitalsResponse {
   latitude: number
   longitude: number
@@ -35,13 +70,35 @@ export interface NearbyHospitalsResponse {
 export interface OptimizeRouteResponse {
   hospital: Hospital
   routes: RouteOption[]
+  final_decision?: {
+    selected_route: 'fastest' | 'safest'
+    decision_priority: 'speed' | 'safety' | 'balanced'
+    score: number
+    justification: string
+  }
   decision?: DecisionEngineResponse
   alerts?: SmartAlert[]
   scenario?: EmergencyScenario
+  ai?: AIInsights
   status_text?: {
     risk: string
     route: string
+    decision?: string
   }
+}
+
+export interface BlockedRoad {
+  from_node: number
+  to_node: number
+  coordinates: [[number, number], [number, number]]
+}
+
+export interface SimulateDisasterResponse {
+  disaster_type: string
+  severity: string
+  blocked_roads: BlockedRoad[]
+  message: string
+  rerouting_triggered: boolean
 }
 
 export interface EmergencyScenario {
@@ -132,6 +189,37 @@ export interface ApiError {
   status: number
 }
 
+interface ApiEnvelope<T> {
+  status: string
+  data?: T
+  message?: string
+  error?: string
+}
+
+async function parseApiResponse<T>(response: Response, fallbackMessage: string): Promise<T> {
+  let payload: any
+  try {
+    payload = await response.json()
+  } catch (e) {
+    throw new Error(`Critical API connection failure: ${response.statusText || 'Internal Server Error'}`)
+  }
+
+  if (!response.ok) {
+    const errorMsg = payload?.message || payload?.error || fallbackMessage
+    // If it's a 500, we want a more technical but descriptive prefix for hackathon judging
+    if (response.status >= 500) {
+      throw new Error(`Backend Exception [${response.status}]: ${errorMsg}`)
+    }
+    throw new Error(errorMsg)
+  }
+
+  if (payload && typeof payload === 'object' && 'data' in payload && payload.data !== undefined) {
+    return payload.data as T
+  }
+
+  return payload as T
+}
+
 export interface OsrmRouteResponse {
   source: {
     latitude: number
@@ -169,12 +257,7 @@ export async function optimizeRoute(
       }),
     })
 
-    if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.error || 'Failed to optimize route')
-    }
-
-    return await response.json()
+    return await parseApiResponse<OptimizeRouteResponse>(response, 'Failed to optimize route')
   } catch (error) {
     console.error('Error optimizing route:', error)
     throw error
@@ -200,12 +283,7 @@ export async function predictRisk(
       }),
     })
 
-    if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.error || 'Failed to predict risk')
-    }
-
-    return await response.json()
+    return await parseApiResponse<RiskPredictionResponse>(response, 'Failed to predict risk')
   } catch (error) {
     console.error('Error predicting risk:', error)
     throw error
@@ -231,12 +309,8 @@ export async function getNearestHospital(
       }),
     })
 
-    if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.error || 'Failed to get nearest hospital')
-    }
-
-    return await response.json()
+    const data = await parseApiResponse<{ hospital: Hospital }>(response, 'Failed to get nearest hospital')
+    return data.hospital
   } catch (error) {
     console.error('Error getting nearest hospital:', error)
     throw error
@@ -264,13 +338,7 @@ export async function getNearbyHospitals(
       }),
     })
 
-    if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.error || 'Failed to get nearby hospitals')
-    }
-
-    const payload = await response.json()
-    return payload.data as NearbyHospitalsResponse
+    return await parseApiResponse<NearbyHospitalsResponse>(response, 'Failed to get nearby hospitals')
   } catch (error) {
     console.error('Error getting nearby hospitals:', error)
     throw error
@@ -300,13 +368,7 @@ export async function getOsrmRoute(
       }),
     })
 
-    if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.error || 'Failed to get OSRM route')
-    }
-
-    const payload = await response.json()
-    return payload.data as OsrmRouteResponse
+    return await parseApiResponse<OsrmRouteResponse>(response, 'Failed to get OSRM route')
   } catch (error) {
     console.error('Error getting OSRM route:', error)
     throw error
@@ -334,13 +396,7 @@ export async function estimateTraffic(
       }),
     })
 
-    if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.error || 'Failed to estimate traffic')
-    }
-
-    const payload = await response.json()
-    return payload.data as TrafficEstimateResponse
+    return await parseApiResponse<TrafficEstimateResponse>(response, 'Failed to estimate traffic')
   } catch (error) {
     console.error('Error estimating traffic:', error)
     throw error
@@ -362,13 +418,7 @@ export async function decideRoute(
       body: JSON.stringify({ routes }),
     })
 
-    if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.error || 'Failed to decide route')
-    }
-
-    const payload = await response.json()
-    return payload.data as DecisionEngineResponse
+    return await parseApiResponse<DecisionEngineResponse>(response, 'Failed to decide route')
   } catch (error) {
     console.error('Error deciding route:', error)
     throw error
@@ -392,11 +442,29 @@ export async function getLiveAlerts(
     }),
   })
 
-  if (!response.ok) {
-    const error = await response.json()
-    throw new Error(error.message || 'Failed to fetch live alerts')
-  }
+  return await parseApiResponse<LiveAlertsResponse>(response, 'Failed to fetch live alerts')
+}
 
-  const payload = await response.json()
-  return payload.data as LiveAlertsResponse
+/**
+ * Simulate a disaster (flood/accident/congestion) at coordinates.
+ */
+export async function simulateDisaster(
+  type: string,
+  latitude: number,
+  longitude: number
+): Promise<SimulateDisasterResponse> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/simulate-disaster`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ type, latitude, longitude }),
+    })
+
+    return await parseApiResponse<SimulateDisasterResponse>(response, 'Failed to simulate disaster')
+  } catch (error) {
+    console.error('Error simulating disaster:', error)
+    throw error
+  }
 }

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef } from "react"
 import L from "leaflet"
 import "leaflet/dist/leaflet.css"
-import { RouteOption, Hospital } from "@/lib/api"
+import { RouteOption, Hospital, BlockedRoad } from "@/lib/api"
 
 const isFiniteNumber = (value: unknown): value is number =>
   typeof value === "number" && Number.isFinite(value)
@@ -40,6 +40,15 @@ const hospitalIcon = L.icon({
   shadowSize: [41, 41],
 })
 
+const blockedIcon = L.icon({
+  iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-black.png",
+  shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41],
+})
+
 interface MapComponentProps {
   hospital?: Hospital
   routes?: RouteOption[]
@@ -49,6 +58,7 @@ interface MapComponentProps {
     latitude: number
     longitude: number
   } | null
+  blockedRoads?: BlockedRoad[]
 }
 
 export default function MapComponent({
@@ -57,6 +67,7 @@ export default function MapComponent({
   selectedRouteType = "fastest",
   showRiskOverlay = true,
   currentLocation,
+  blockedRoads = [],
 }: MapComponentProps) {
   const mapRef = useRef<L.Map | null>(null)
   const routeLayersRef = useRef<L.Layer[]>([])
@@ -158,7 +169,24 @@ export default function MapComponent({
 
       markerLayersRef.current.push(currentMarker, locationCircle)
     }
-  }, [validCurrentLocation, validHospital])
+
+    // Add blocked road markers (use coordinates from API)
+    if (blockedRoads && blockedRoads.length > 0) {
+      blockedRoads.forEach((road) => {
+        const coords = road.coordinates || road.coordinates || [[0,0],[0,0]]
+        // coords is [[lat1, lon1], [lat2, lon2]]
+        const [a, b] = coords
+        const lat = (a[0] + b[0]) / 2
+        const lon = (a[1] + b[1]) / 2
+
+        const blockedMarker = L.marker([lat, lon], { icon: blockedIcon })
+          .addTo(map)
+          .bindPopup(`<strong>Blocked Road</strong><br/>Nodes: ${road.from_node} → ${road.to_node}<br/>Coords: ${lat.toFixed(5)}, ${lon.toFixed(5)}`)
+
+        markerLayersRef.current.push(blockedMarker)
+      })
+    }
+  }, [validCurrentLocation, validHospital, blockedRoads])
 
   // Update route visualization when routes or selectedRouteType changes
   useEffect(() => {

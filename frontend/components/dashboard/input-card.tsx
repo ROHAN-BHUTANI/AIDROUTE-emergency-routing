@@ -12,7 +12,14 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
-import { MapPin, Navigation, AlertTriangle, Loader2, Locate } from "lucide-react"
+import { MapPin, Navigation, AlertTriangle, Loader2, Locate, Flame, Waves, Car } from "lucide-react"
+
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 
 const emergencyTypes = [
   { value: "medical", label: "Medical Emergency" },
@@ -29,12 +36,13 @@ interface InputCardProps {
     longitude: string
     emergencyType: string
   }) => void
+  onSimulate?: (type: string) => void
   isLoading?: boolean
   isLocating?: boolean
   onLocationClick?: () => void
 }
 
-export function InputCard({ onOptimize, isLoading, isLocating, onLocationClick }: InputCardProps) {
+export function InputCard({ onOptimize, onSimulate, isLoading, isLocating, onLocationClick }: InputCardProps) {
   const [latitude, setLatitude] = useState("")
   const [longitude, setLongitude] = useState("")
   const [emergencyType, setEmergencyType] = useState("")
@@ -146,6 +154,57 @@ export function InputCard({ onOptimize, isLoading, isLocating, onLocationClick }
             </Button>
           </div>
         </form>
+
+        <div className="mt-8 space-y-3 pt-6 border-t border-border/40">
+          <div className="flex items-center gap-2">
+            <div className="h-1 w-1 rounded-full bg-destructive animate-pulse" />
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Disaster Simulation</h3>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button type="button" className="inline-flex items-center">
+                    <AlertTriangle className="h-3 w-3 text-muted-foreground/50 cursor-help" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="right" className="max-w-[200px]">
+                  <p className="text-xs">Injects real-time road blocks into the network to test AI rerouting and resiliency.</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex flex-col h-auto py-3 gap-1.5 border-destructive/20 hover:bg-destructive/5 hover:border-destructive/40 group"
+              onClick={() => onSimulate?.('flood')}
+            >
+              <Waves className="h-4 w-4 text-primary group-hover:scale-110 transition-transform" />
+              <span className="text-[10px] font-medium">Flood</span>
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex flex-col h-auto py-3 gap-1.5 border-destructive/20 hover:bg-destructive/5 hover:border-destructive/40 group"
+              onClick={() => onSimulate?.('fire')}
+            >
+              <Flame className="h-4 w-4 text-orange-500 group-hover:scale-110 transition-transform" />
+              <span className="text-[10px] font-medium">Fire</span>
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex flex-col h-auto py-3 gap-1.5 border-destructive/20 hover:bg-destructive/5 hover:border-destructive/40 group"
+              onClick={() => onSimulate?.('accident')}
+            >
+              <Car className="h-4 w-4 text-yellow-500 group-hover:scale-110 transition-transform" />
+              <span className="text-[10px] font-medium">Crash</span>
+            </Button>
+          </div>
+          <p className="text-[10px] leading-relaxed text-muted-foreground italic">
+            * Simulates blocked road clusters to test AI rerouting capabilities.
+          </p>
+        </div>
       </CardContent>
     </Card>
   )

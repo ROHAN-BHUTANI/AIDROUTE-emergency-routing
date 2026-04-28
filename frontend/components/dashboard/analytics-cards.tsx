@@ -3,7 +3,14 @@
 import { Card, CardContent } from "@/components/ui/card"
 import { Clock, Route, AlertTriangle, MessageSquare, Zap, MapPin, Siren, ShieldAlert } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { EmergencyScenario, RouteOption, Hospital, SmartAlert } from "@/lib/api"
+import { AIInsights, EmergencyScenario, RouteOption, Hospital, SmartAlert } from "@/lib/api"
+
+interface DecisionBrief {
+  selected_route: string
+  decision_priority: string
+  score: number
+  justification: string
+}
 
 interface AnalyticsCardsProps {
   hospital?: Hospital
@@ -11,6 +18,8 @@ interface AnalyticsCardsProps {
   selectedRouteType?: 'fastest' | 'safest'
   scenario?: EmergencyScenario
   alerts?: SmartAlert[]
+  ai?: AIInsights
+  decision?: DecisionBrief
   isLoading?: boolean
 }
 
@@ -20,6 +29,8 @@ export function AnalyticsCards({
   selectedRouteType = 'fastest',
   scenario,
   alerts = [],
+  ai,
+  decision,
   isLoading 
 }: AnalyticsCardsProps) {
   const isFiniteNumber = (value: unknown): value is number =>
@@ -27,6 +38,11 @@ export function AnalyticsCards({
 
   const selectedRoute = routes?.find(r => r.type === selectedRouteType)
   const alternateRoute = routes?.find(r => r.type !== selectedRouteType)
+  const aiSeverity = ai?.disaster_analysis?.severity || null
+  const aiRecommendation = ai?.recommended_action?.summary || selectedRoute?.recommendation || "AI recommendation will appear after analysis."
+  const aiRouteExplanation = ai?.route_explanation?.explanation || selectedRoute?.risk_explanation || "Route explanation will appear after AI analysis."
+  const aiConfidence = ai?.disaster_analysis?.confidence
+  const resourceAllocation = ai?.recommended_action?.resource_allocation || []
   const trafficLabel = (() => {
     const risk = selectedRoute?.risk_score ?? 0
     if (risk >= 7) return "High ⚠️"
@@ -36,7 +52,31 @@ export function AnalyticsCards({
   const etaValue = selectedRoute?.eta !== undefined ? `${selectedRoute.eta} mins` : "6 mins"
   const hospitalName = hospital?.name || "AIIMS"
   const recommendationValue = selectedRoute?.recommendation || (alternateRoute ? "Alternate route reduces delay by 2 mins" : "Alternate route reduces delay by 2 mins")
-  const riskExplanation = selectedRoute?.risk_explanation || "AI explanation will appear after route intelligence is generated."
+  const getSeverityMeta = (severity: string | null) => {
+    switch (severity) {
+      case "low":
+        return {
+          label: "Low",
+          className: "border-green-500/20 bg-green-500/10 text-green-500",
+        }
+      case "medium":
+        return {
+          label: "Medium",
+          className: "border-amber-500/20 bg-amber-500/10 text-amber-500",
+        }
+      case "high":
+        return {
+          label: "High",
+          className: "border-red-500/20 bg-red-500/10 text-red-500",
+        }
+      default:
+        return {
+          label: "Unknown",
+          className: "border-border bg-muted/10 text-muted-foreground",
+        }
+    }
+  }
+  const severityMeta = getSeverityMeta(aiSeverity)
 
   const getRiskColor = (level: string | null) => {
     switch (level) {
@@ -98,47 +138,101 @@ export function AnalyticsCards({
 
   return (
     <div className="space-y-4">
-      <div className="grid gap-4 sm:grid-cols-2">
-        {cards.map((card) => (
-          <Card
-            key={card.title}
-            className={cn(
-              "group relative overflow-hidden border-border bg-card/50 backdrop-blur-sm transition-all hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5",
-              isLoading && "animate-pulse"
-            )}
-          >
-            <CardContent className="p-5">
-              <div className="flex items-start justify-between">
-                <div className="space-y-3 flex-1">
-                  <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                    {card.title}
-                  </p>
-                  <div className="flex flex-wrap items-baseline gap-1">
-                    <span
-                      className={cn(
-                        "text-2xl font-bold tracking-tight",
-                        card.customClass ? card.customClass.split(" ")[0] : "text-foreground"
+      {isLoading && (
+        <div className="grid gap-4 sm:grid-cols-2">
+          {[1,2,3,4].map(i => (
+            <Card key={i} className="h-[120px] bg-muted/20 animate-pulse border-border/50" />
+          ))}
+        </div>
+      )}
+
+      {!isLoading && (
+        <div className="grid gap-4 sm:grid-cols-2">
+          {cards.map((card) => (
+            <Card
+              key={card.title}
+              className={cn(
+                "group relative overflow-hidden border-border bg-card/50 backdrop-blur-sm transition-all hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5",
+              )}
+            >
+              <CardContent className="p-5">
+                <div className="flex items-start justify-between">
+                  <div className="space-y-3 flex-1">
+                    <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                      {card.title}
+                    </p>
+                    <div className="flex flex-wrap items-baseline gap-1">
+                      <span
+                        className={cn(
+                          "text-2xl font-bold tracking-tight",
+                          card.customClass ? card.customClass.split(" ")[0] : "text-foreground"
+                        )}
+                      >
+                        {card.value}
+                      </span>
+                      {card.unit && (
+                        <span className="text-sm text-muted-foreground">{card.unit}</span>
                       )}
-                    >
-                      {card.value}
-                    </span>
-                    {card.unit && (
-                      <span className="text-sm text-muted-foreground">{card.unit}</span>
-                    )}
+                    </div>
+                    <p className="text-xs text-muted-foreground">{card.description}</p>
                   </div>
-                  <p className="text-xs text-muted-foreground">{card.description}</p>
+                  <div className={cn(
+                    "flex h-10 w-10 items-center justify-center rounded-lg shrink-0",
+                    card.customClass || "bg-primary/10 text-primary"
+                  )}>
+                    <card.icon className="h-5 w-5" />
+                  </div>
                 </div>
-                <div className={cn(
-                  "flex h-10 w-10 items-center justify-center rounded-lg shrink-0",
-                  card.customClass || "bg-primary/10 text-primary"
-                )}>
-                  <card.icon className="h-5 w-5" />
-                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {/* AI Decision & Reasoning */}
+      {decision && (
+        <Card className="border-primary/20 bg-primary/5 overflow-hidden">
+          <div className="bg-primary/10 px-4 py-2 flex items-center justify-between border-b border-primary/10">
+            <div className="flex items-center gap-2">
+              <Zap className="h-4 w-4 text-primary" />
+              <span className="text-xs font-bold uppercase tracking-wider text-primary">Intelligent Decision</span>
+            </div>
+            <span className={cn(
+              "text-[10px] font-bold px-2 py-0.5 rounded-full uppercase",
+              decision.decision_priority === 'safety' ? "bg-red-500/20 text-red-500" : "bg-primary/20 text-primary"
+            )}>
+              Priority: {decision.decision_priority}
+            </span>
+          </div>
+          <CardContent className="p-5">
+            <div className="space-y-4">
+              <div className="space-y-1">
+                <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-tight">AI Reasoning</p>
+                <p className="text-sm font-medium leading-relaxed text-foreground">
+                  {decision.justification}
+                </p>
               </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-tight">Strategy</p>
+                  <p className="text-sm font-bold text-primary">
+                    {decision.selected_route === 'safest' ? 'Risk Avoidance' : 'Time Optimization'}
+                  </p>
+                </div>
+                {aiConfidence && (
+                  <div className="space-y-1">
+                    <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-tight">Confidence</p>
+                    <p className="text-sm font-bold text-foreground">
+                      {(aiConfidence * 100).toFixed(0)}%
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Hospital and Route Info Cards */}
       <div className="grid gap-4 sm:grid-cols-2">
@@ -274,17 +368,41 @@ export function AnalyticsCards({
               <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
                 AI Recommendation
               </p>
-              <p className="break-words text-sm leading-relaxed text-foreground">
-                {selectedRoute?.recommendation || (
-                  <span className="text-muted-foreground italic">
-                    Enter route details to receive AI-powered optimization recommendations based on real-time conditions.
-                  </span>
-                )}
-              </p>
-              <div className="mt-3 rounded-lg border border-primary/20 bg-primary/10 p-3">
-                <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-primary/80">Risk Explanation</p>
-                <p className="text-xs leading-relaxed text-foreground/90">{riskExplanation}</p>
+              <div className={cn("inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-wider", severityMeta.className)}>
+                <span>Disaster Severity</span>
+                <span>{severityMeta.label}</span>
               </div>
+              <p className="break-words text-sm leading-relaxed text-foreground">
+                {aiRecommendation}
+              </p>
+              <div className="rounded-lg border border-primary/20 bg-primary/10 p-3">
+                <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-primary/80">Route Explanation</p>
+                <p className="text-xs leading-relaxed text-foreground/90">{aiRouteExplanation}</p>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <div className="rounded-lg border border-border/80 bg-background/40 p-2.5">
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Confidence</p>
+                  <p className="text-sm font-semibold text-foreground">{typeof aiConfidence === "number" ? `${Math.round(aiConfidence * 100)}%` : "—"}</p>
+                </div>
+                <div className="rounded-lg border border-border/80 bg-background/40 p-2.5">
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Resources</p>
+                  <p className="text-sm font-semibold text-foreground">
+                    {resourceAllocation.length ? `${resourceAllocation.length} allocations` : "Standard support"}
+                  </p>
+                </div>
+              </div>
+              {resourceAllocation.length > 0 && (
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {resourceAllocation.slice(0, 4).map((item) => (
+                    <span
+                      key={item.resource}
+                      className="rounded-full border border-border bg-background/60 px-2.5 py-1 text-[11px] font-medium text-muted-foreground"
+                    >
+                      {item.resource}: {item.units}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </CardContent>

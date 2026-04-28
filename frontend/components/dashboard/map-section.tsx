@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Map, Layers, Maximize2 } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { RouteOption, Hospital } from "@/lib/api"
+import { RouteOption, Hospital, BlockedRoad } from "@/lib/api"
 
 const DynamicMapComponent = dynamic(() => import("./map-component"), {
   ssr: false,
@@ -22,6 +22,7 @@ interface MapSectionProps {
     latitude: number
     longitude: number
   } | null
+  blockedRoads?: BlockedRoad[]
 }
 
 function MapLoadingPlaceholder() {
@@ -43,6 +44,7 @@ export function MapSection({
   routes,
   selectedRouteType = "fastest",
   currentLocation,
+  blockedRoads = [],
 }: MapSectionProps) {
   const [showRiskOverlay, setShowRiskOverlay] = useState(true)
   const [isFullscreen, setIsFullscreen] = useState(false)
@@ -102,6 +104,7 @@ export function MapSection({
               selectedRouteType={selectedRouteType}
               currentLocation={currentLocation}
               showRiskOverlay={showRiskOverlay}
+              blockedRoads={blockedRoads}
             />
           ) : (
             <div className="absolute inset-0 flex items-center justify-center">
