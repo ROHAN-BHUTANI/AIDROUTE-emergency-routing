@@ -2,24 +2,6 @@
   "buildCommand": "cd frontend && npm run build",
   "outputDirectory": "frontend/.next",
   "framework": "nextjs",
-  
-  "env": {
-    "NEXT_PUBLIC_API_URL": {
-      "description": "Backend API URL (set in Vercel dashboard)",
-      "required": true,
-      "default": "http://localhost:5000"
-    }
-  },
-  
-  "envPrefix": "NEXT_PUBLIC_",
-  
-  "functions": {
-    "frontend/.next/standalone/server.js": {
-      "maxDuration": 60,
-      "memory": 1024
-    }
-  },
-  
   "headers": [
     {
       "source": "/:path*",
