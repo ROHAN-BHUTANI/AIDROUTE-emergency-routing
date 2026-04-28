@@ -2,3 +2,6 @@ flask
 flask-cors
 pandas
 networkx
+gunicorn
+python-dotenv
+requests
